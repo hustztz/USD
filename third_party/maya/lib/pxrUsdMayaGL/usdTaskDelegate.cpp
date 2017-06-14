@@ -276,8 +276,8 @@ UsdTaskDelegate::_UpdateLightingTask(GlfSimpleLightingContextRefPtr lightingCont
 			cache[HdStLightTokens->shadowParams] = VtValue(shadowParams);
 			cache[HdStLightTokens->shadowCollection] = HdRprimCollection(HdTokens->geometry, HdTokens->refined);
 		
-			GetRenderIndex().GetChangeTracker().MarkLightDirty(
-				_lightIds[i], HdChangeTracker::DirtyShadowParams);
+			GetRenderIndex().GetChangeTracker().MarkSprimDirty(
+				_lightIds[i], HdStLight::DirtyShadowParams);
 		}
 		else
 		{

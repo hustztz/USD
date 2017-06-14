@@ -632,7 +632,7 @@ bool UsdMayaProxyDrawOverride::userSelect(MHWRender::MSelectionInfo& selectInfo,
 		_RenderSelects(selectInfo, context);
 	}
 
-	HdxSelectionSharedPtr primSelection(new HdxSelection(&*(UsdBatchRenderer::GetGlobalRenderer().GetRenderIndex())));
+	HdxSelectionSharedPtr primSelection(new HdxSelection);
 
 	// Require the hit info from the select result map.
 	UsdBatchRenderer::HitInfoPair hitPos = _GetBatchRenderer().GetHitInfo( _shapeRenderer.GetSdfPath() );

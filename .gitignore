@@ -1,1 +1,3 @@
 .p4*
+msvc14/
+build/

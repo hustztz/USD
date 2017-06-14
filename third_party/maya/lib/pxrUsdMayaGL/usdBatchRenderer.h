@@ -36,7 +36,6 @@
 #include "pxr/imaging/hd/renderIndex.h"
 #include "pxr/imaging/hdx/intersector.h"
 #include "pxr/imaging/hdx/selectionTracker.h"
-#include "pxr/usdImaging/usdImaging/engine.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
 
 #include <unordered_set>
@@ -140,7 +139,7 @@ public:
 	HitInfoPair GetHitInfo(const SdfPath& sharedId) const;
 
 	PXRUSDMAYAGL_API
-	HdRenderIndexSharedPtr const &GetRenderIndex() const { return _renderIndex; }
+	HdRenderIndex* GetRenderIndex() const { return _renderIndex; }
 
 	/// \brief update the current time stamp
 	/// and return whether is the same time stamp.
@@ -194,7 +193,8 @@ private:
     /// \brief Master \c UsdImagingGL renderer used to render batches.
 
     HdEngine _hdEngine;
-    HdRenderIndexSharedPtr _renderIndex;
+    HdRenderIndex * _renderIndex;
+	HdStRenderDelegate _renderDelegate;
 	UsdTaskDelegateSharedPtr _taskDelegate;
     HdxIntersectorSharedPtr _intersector;
 	HdxSelectionTrackerSharedPtr _selTracker;

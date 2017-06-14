@@ -46,7 +46,7 @@ public:
 
 	PXRUSDMAYAGL_API
 	void PrepareForDelegate(
-		HdRenderIndexSharedPtr const& renderIndex,
+		HdRenderIndex *renderIndex,
 		size_t baseKey,
 		const UsdPrim& usdPrim,
 		const SdfPathVector& excludePrimPaths,

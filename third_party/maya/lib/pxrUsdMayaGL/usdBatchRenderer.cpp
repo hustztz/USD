@@ -22,7 +22,7 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/imaging/glf/glew.h"
-#include "pxr/imaging/hd/light.h"
+#include "pxr/imaging/hdSt/light.h"
 #include "pxr/imaging/hdx/tokens.h"
 
 #include "pxrUsdMayaGL/usdShapeRenderer.h"
@@ -46,14 +46,22 @@ UsdBatchRenderer::Init()
 UsdBatchRenderer UsdBatchRenderer::_sGlobalRenderer;
 
 UsdBatchRenderer::UsdBatchRenderer()
-    : _renderIndex(new HdRenderIndex())
-    , _taskDelegate(new UsdTaskDelegate(_renderIndex, SdfPath("/mayaTask")))
-    , _intersector(new HdxIntersector(_renderIndex))
+    : _renderIndex(nullptr)
+	, _renderDelegate()
+    , _taskDelegate()
+    , _intersector()
 	, _selTracker(new HdxSelectionTracker)
 	, _lightingContext(GlfSimpleLightingContext::New())
 	, _renderTimeStamp(0)
 	, _selectTimeStamp(0)
 {
+	_renderIndex = HdRenderIndex::New(&_renderDelegate);
+    if (!TF_VERIFY(_renderIndex != nullptr)) {
+        return;
+    }
+    _taskDelegate = TaskDelegateSharedPtr(
+                          new TaskDelegate(_renderIndex, SdfPath("/mayaTask")));
+    _intersector = HdxIntersectorSharedPtr(new HdxIntersector(_renderIndex));
 }
 
 bool UsdBatchRenderer::updateRenderTimeStamp(unsigned long long timeStamp)
