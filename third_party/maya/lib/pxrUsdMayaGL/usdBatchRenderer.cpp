@@ -59,8 +59,8 @@ UsdBatchRenderer::UsdBatchRenderer()
     if (!TF_VERIFY(_renderIndex != nullptr)) {
         return;
     }
-    _taskDelegate = TaskDelegateSharedPtr(
-                          new TaskDelegate(_renderIndex, SdfPath("/mayaTask")));
+    _taskDelegate = UsdTaskDelegateSharedPtr(
+                          new UsdTaskDelegate(_renderIndex, SdfPath("/mayaTask")));
     _intersector = HdxIntersectorSharedPtr(new HdxIntersector(_renderIndex));
 }
 
@@ -84,7 +84,7 @@ void
 UsdBatchRenderer::InsertRenderQueue(
 	UsdShapeRenderer * renderer,
 	uint8_t refineLevel,
-	TfToken geometryCol,
+	TfTokenVector const & renderTags,
 	const GfVec4f& overrideColor)
 {
 	if (not renderer)
@@ -96,7 +96,7 @@ UsdBatchRenderer::InsertRenderQueue(
 	// Set RenderParams
 	UsdRenderParams params;
 	params.refineLevel = refineLevel;
-	params.geometryCol = geometryCol;
+	params.renderTags = renderTags;
 	params.overrideColor = overrideColor;
 	size_t paramKey = params.Hash();
 
@@ -218,7 +218,7 @@ UsdBatchRenderer::RenderBatches(
 		tasks.push_back(
 			_taskDelegate->GetRenderTask(
 				renderSetIter.first,
-				params.geometryCol,
+				params.renderTags,
 				drawRepr,
 				params.overrideColor,
 				cullStyle,
@@ -271,11 +271,13 @@ UsdBatchRenderer::RenderSelects(
                 "--- pickQueue, batch %zx, size %zu\n",
                 renderSetIter.first, renderPaths.size());
             
-        TfToken colName = renderParams.geometryCol;
+        TfToken colName = HdTokens->geometry;
         HdRprimCollection rprims(colName, drawRepr);
         rprims.SetRootPaths(roots);
+		rprims.SetRenderTags(renderParams.renderTags);
 
         qparams.cullStyle = cullStyle;
+		qparams.renderTags = renderParams.renderTags;
             
         HdxIntersector::Result result;
         HdxIntersector::HitVector hits;

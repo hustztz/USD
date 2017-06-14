@@ -358,7 +358,7 @@ UsdTaskDelegate::GetSetupTasks(GlfSimpleLightingContextRefPtr lightingContext)
 HdTaskSharedPtr
 UsdTaskDelegate::GetRenderTask(
 	size_t hash,
-	TfToken geometryCol,
+	TfTokenVector const & renderTags,
 	TfToken drawRepr,
 	GfVec4f const & overrideColor,
 	HdCullStyle cullStyle,
@@ -376,9 +376,10 @@ UsdTaskDelegate::GetRenderTask(
     }
 
     // Update collection in the value cache
-    TfToken colName = geometryCol;
+    TfToken colName = HdTokens->geometry;
     HdRprimCollection rprims(colName, drawRepr);
     rprims.SetRootPaths(roots);
+	rprims.SetRenderTags(renderTags);
 
     // update value cache
     _SetValue(renderTaskId, HdTokens->collection, rprims);

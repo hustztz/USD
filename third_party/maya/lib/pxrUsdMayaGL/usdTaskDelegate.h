@@ -63,7 +63,7 @@ public:
 
 	PXRUSDMAYAGL_API
 	HdTaskSharedPtr GetRenderTask(size_t hash,
-		TfToken geometryCol,
+		TfTokenVector const & renderTags,
 		TfToken drawRepr,
 		GfVec4f const & overrideColor,
 		HdCullStyle cullStyle,

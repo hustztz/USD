@@ -111,7 +111,7 @@ UsdMayaProxyDrawOverride::isBounded(
     const MDagPath& objPath,
     const MDagPath& /* cameraPath */) const
 {
-    return TfGetEnvSetting(PIXMAYA_ENABLE_BOUNDING_BOX_MODE);
+    return UsdMayaIsBoundingBoxModeEnabled;
 }
 
 MBoundingBox
@@ -188,15 +188,17 @@ UsdMayaProxyDrawOverride::prepareForDraw(
         return NULL;
     }
 
-	TfToken geometryCol = HdTokens->geometry;
-	if (showGuides)
-		geometryCol = (
-			showRenderGuides ? UsdImagingCollectionTokens->geometryAndGuides
-			: UsdImagingCollectionTokens->geometryAndInteractiveGuides);
-	else
-		geometryCol = (
-			showRenderGuides ? UsdImagingCollectionTokens->geometryAndRenderGuides
-			: HdTokens->geometry);
+	// XXX Not yet adding ability to turn off display of proxy geometry, but
+    // we should at some point, as in usdview
+    TfTokenVector renderTags;
+    renderTags.push_back(HdTokens->geometry);
+    renderTags.push_back(HdTokens->proxy);
+    if (showGuides) {
+        renderTags.push_back(HdTokens->guide);
+    } 
+    if (showRenderGuides) {
+        renderTags.push_back(_tokens->render);
+    }
 
 	// Set the data into the shape renderer.
 	_shapeRenderer.PrepareForDelegate(
@@ -211,7 +213,7 @@ UsdMayaProxyDrawOverride::prepareForDraw(
 	_GetBatchRenderer().InsertRenderQueue(
 		&_shapeRenderer,
 		subdLevel,
-		geometryCol,
+		renderTags,
 		tint ? tintColor : GfVec4f(.0f, .0f, .0f, .0f)
 		);
 
@@ -338,9 +340,6 @@ UsdMayaProxyDrawOverride::_SetupLighting(
 
 	if (status == MStatus::kSuccess)
 	{
-		const GLfloat ambient[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-		const GLfloat specular[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-
 		GlfSimpleLight light;
 		for (unsigned int i = 0; i < nbLights; ++i) {
 			MFloatVector direction;
@@ -528,7 +527,7 @@ UsdMayaProxyDrawOverride::draw(const MHWRender::MDrawContext& context, const MUs
 	if (drawData)
 	{
 		if (drawData->_isSelected ||
-			(not TfGetEnvSetting(PIXMAYA_ENABLE_BOUNDING_BOX_MODE) && (displayStyle & MHWRender::MFrameContext::DisplayStyle::kBoundingBox)))
+			(not UsdMayaIsBoundingBoxModeEnabled() && (displayStyle & MHWRender::MFrameContext::DisplayStyle::kBoundingBox)))
 		{
 			MStatus status;
 			MMatrix projectionMat = context.getMatrix(MHWRender::MDrawContext::kProjectionMtx, &status);

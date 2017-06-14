@@ -34,6 +34,7 @@
 #include "pxr/imaging/glf/simpleLightingContext.h"
 #include "pxr/imaging/hd/engine.h"
 #include "pxr/imaging/hd/renderIndex.h"
+#include "pxr/imaging/hdSt/renderDelegate.h"
 #include "pxr/imaging/hdx/intersector.h"
 #include "pxr/imaging/hdx/selectionTracker.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
@@ -71,7 +72,10 @@ class UsdBatchRenderer : private boost::noncopyable
 		// USD Params
 		//
 		uint8_t refineLevel = 0;
-		TfToken geometryCol = HdTokens->geometry;
+		
+		// Geometry Params
+        //
+		TfTokenVector renderTags;
 
 		// Color Params
 		//
@@ -81,8 +85,10 @@ class UsdBatchRenderer : private boost::noncopyable
 		size_t Hash() const
 		{
 			size_t hash = (refineLevel << 1);
-			boost::hash_combine(hash, geometryCol);
 			boost::hash_combine(hash, overrideColor);
+			TF_FOR_ALL(rtIt, _renderTags) {
+				boost::hash_combine(hash, rtIt->Hash());
+			}
 
 			return hash;
 		}
@@ -100,7 +106,7 @@ public:
     /// and insert the corresponding render queue according to the render params  
     /// that is set by refineLevel, geometryCol and overrideColor.
 	PXRUSDMAYAGL_API
-	void InsertRenderQueue(UsdShapeRenderer * renderer, uint8_t refineLevel, TfToken geometryCol, const GfVec4f& overrideColor);
+	void InsertRenderQueue(UsdShapeRenderer * renderer, uint8_t refineLevel, TfTokenVector const & renderTags, const GfVec4f& overrideColor);
 	/// \brief Deregister the shape renderer from the render queue.
 	PXRUSDMAYAGL_API
 	void RemoveRenderQueue(UsdShapeRenderer * renderer);
