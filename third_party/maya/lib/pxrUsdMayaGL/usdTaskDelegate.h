@@ -40,7 +40,7 @@ TF_DECLARE_WEAK_AND_REF_PTRS(GlfSimpleLightingContext);
 class UsdTaskDelegate : public HdSceneDelegate {
 public:
 	PXRUSDMAYAGL_API
-	UsdTaskDelegate(HdRenderIndexSharedPtr const& renderIndex,
+	UsdTaskDelegate(HdRenderIndex *renderIndex,
 		SdfPath const& delegateID);
 
 	// HdSceneDelegate interface

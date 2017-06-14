@@ -23,7 +23,9 @@
 //
 // Some header #define's Bool as int, which breaks stuff in sdf/types.h.
 // Include it first to sidestep the problem. :-/
-#include "pxr/imaging/hd/camera.h"
+#include "pxr/imaging/hdSt/camera.h"
+#include "pxr/imaging/hdSt/light.h"
+
 #include "pxr/imaging/hdx/renderTask.h"
 #include "pxr/imaging/hdx/shadowTask.h"
 #include "pxr/imaging/hdx/shadowMatrixComputation.h"
@@ -89,7 +91,7 @@ namespace {
 }
 
 UsdTaskDelegate::UsdTaskDelegate(
-    HdRenderIndexSharedPtr const& renderIndex, SdfPath const& delegateID)
+    HdRenderIndex *renderIndex, SdfPath const& delegateID)
     : HdSceneDelegate(renderIndex, delegateID)
 {
     // populate tasks in renderindex
@@ -105,12 +107,14 @@ UsdTaskDelegate::UsdTaskDelegate(
 
     // camera
     {
-        renderIndex->InsertCamera<HdCamera>(this, _cameraId);
+        // Since we're hardcoded to use HdStRenderDelegate, we expect to
+        // have camera Sprims.
+        TF_VERIFY(renderIndex->IsSprimTypeSupported(HdPrimTypeTokens->camera));
+
+        renderIndex->InsertSprim(HdPrimTypeTokens->camera, this, _cameraId);
         _ValueCache &cache = _valueCacheMap[_cameraId];
-        cache[HdShaderTokens->worldToViewMatrix] = VtValue(GfMatrix4d(1));
-        cache[HdShaderTokens->projectionMatrix]  = VtValue(GfMatrix4d(1));
-        cache[HdTokens->cameraFrustum] = VtValue(); // we don't use GfFrustum.
-        cache[HdTokens->windowPolicy] = VtValue();  // we don't use window policy.
+        cache[HdStCameraTokens->matrices] = VtValue(HdStCameraMatrices());
+        cache[HdStCameraTokens->windowPolicy] = VtValue();  // no window policy.
     }
 
 	// shadow
@@ -186,13 +190,13 @@ UsdTaskDelegate::SetCameraState(
 {
     // cache the camera matrices
     _ValueCache &cache = _valueCacheMap[_cameraId];
-    cache[HdShaderTokens->worldToViewMatrix] = VtValue(viewMatrix);
-    cache[HdShaderTokens->projectionMatrix]  = VtValue(projectionMatrix);
-    cache[HdTokens->cameraFrustum] = VtValue(); // we don't use GfFrustum.
-    cache[HdTokens->windowPolicy]  = VtValue(CameraUtilFit);
+    cache[HdStCameraTokens->matrices] =
+        VtValue(HdStCameraMatrices(viewMatrix, projectionMatrix));
+    cache[HdStCameraTokens->windowPolicy] = VtValue(); // no window policy.
 
     // invalidate the camera to be synced
-    GetRenderIndex().GetChangeTracker().MarkCameraDirty(_cameraId);
+    GetRenderIndex().GetChangeTracker().MarkSprimDirty(_cameraId,
+                                                       HdStCamera::AllDirty);
 
     if( _viewport != viewport )
     {
@@ -224,7 +228,7 @@ UsdTaskDelegate::_UpdateLightingTask(GlfSimpleLightingContextRefPtr lightingCont
 		return;
 
     // cache the GlfSimpleLight vector
-    GlfSimpleLightVector const &lights
+    const GlfSimpleLightVector& lights
         = lightingContext->GetLights();
 
     bool hasNumLightsChanged = false;
@@ -233,17 +237,22 @@ UsdTaskDelegate::_UpdateLightingTask(GlfSimpleLightingContextRefPtr lightingCont
     while( _lightIds.size() < lights.size() )
     {
         SdfPath lightId(
-            TfStringPrintf("%s/light%d", _rootId.GetText(),
+            TfStringPrintf("%s/light%d",
+							_rootId.GetText(),
                            (int)_lightIds.size()));
         _lightIds.push_back(lightId);
+		
+		// Since we're hardcoded to use HdStRenderDelegate, we expect to have
+        // light Sprims.
+        TF_VERIFY(GetRenderIndex().IsSprimTypeSupported(HdPrimTypeTokens->light));
 
-        GetRenderIndex().InsertLight<HdLight>(this, lightId);
+		GetRenderIndex().InsertSprim(HdPrimTypeTokens->light, this, lightId);
         hasNumLightsChanged = true;
     }
     // Remove unused light Ids from HdRenderIndex
     while( _lightIds.size() > lights.size() )
     {
-        GetRenderIndex().RemoveLight(_lightIds.back());
+        GetRenderIndex().RemoveSprim(HdPrimTypeTokens->light, _lightIds.back());
         _lightIds.pop_back();
         hasNumLightsChanged = true;
     }
@@ -253,8 +262,8 @@ UsdTaskDelegate::_UpdateLightingTask(GlfSimpleLightingContextRefPtr lightingCont
     {
         _ValueCache &cache = _valueCacheMap[_lightIds[i]];
         // store GlfSimpleLight directly.
-        cache[HdTokens->lightParams] = VtValue(lights[i]);
-        cache[HdTokens->lightTransform] = VtValue();
+        cache[HdStLightTokens->params] = VtValue(lights[i]);
+        cache[HdStLightTokens->transform] = VtValue();
 		// store shadow params
 		HdxShadowParams shadowParams = HdxShadowParams();
 		shadowParams.enabled = lights[i].HasShadow();
@@ -264,24 +273,24 @@ UsdTaskDelegate::_UpdateLightingTask(GlfSimpleLightingContextRefPtr lightingCont
 			shadowParams.shadowMatrix = HdxShadowMatrixComputationSharedPtr(new ShadowMatrix(lights[i]));
 			shadowParams.bias = -0.001;
 			shadowParams.blur = 0.1;
-			cache[HdTokens->lightShadowParams] = VtValue(shadowParams);
-			cache[HdTokens->lightShadowCollection] = HdRprimCollection(HdTokens->geometry, HdTokens->refined);
+			cache[HdStLightTokens->shadowParams] = VtValue(shadowParams);
+			cache[HdStLightTokens->shadowCollection] = HdRprimCollection(HdTokens->geometry, HdTokens->refined);
 		
 			GetRenderIndex().GetChangeTracker().MarkLightDirty(
 				_lightIds[i], HdChangeTracker::DirtyShadowParams);
 		}
 		else
 		{
-			cache[HdTokens->lightShadowParams] = VtValue(HdxShadowParams());
-			cache[HdTokens->lightShadowCollection] = VtValue();
+			cache[HdStLightTokens->shadowParams] = VtValue(HdxShadowParams());
+			cache[HdStLightTokens->shadowCollection] = VtValue();
 		}
 
         // Only mark as dirty the parameters to avoid unnecessary invalidation
         // specially marking as dirty lightShadowCollection will trigger
         // a collection dirty on geometry and we don't want that to happen
         // always
-        GetRenderIndex().GetChangeTracker().MarkLightDirty(
-            _lightIds[i], HdChangeTracker::DirtyParams);
+        GetRenderIndex().GetChangeTracker().MarkSprimDirty(
+            _lightIds[i], HdStLight::AllDirty);
     }
 
     // sadly the material also comes from lighting context right now...
@@ -309,14 +318,12 @@ UsdTaskDelegate::_UpdateLightingTask(GlfSimpleLightingContextRefPtr lightingCont
 	_ValueCache &cache = _valueCacheMap[_shadowTaskId];
 	HdxShadowTaskParams shadowTaskParams =
 		cache[HdTokens->params].Get<HdxShadowTaskParams>();
-	if (lightingContext->GetUseShadows() != shadowTaskParams.enableShadows ||
-		lightingContext->GetUseLighting() != shadowTaskParams.enableLighting ||
+	if (lightingContext->GetUseShadows() != shadowTaskParams.enableLighting ||
 		_viewport != shadowTaskParams.viewport
 		)
 	{
 		shadowTaskParams.viewport = _viewport;
-		shadowTaskParams.enableShadows = lightingContext->GetUseShadows();
-		shadowTaskParams.enableLighting = lightingContext->GetUseLighting();
+		shadowTaskParams.enableLighting = lightingContext->GetUseShadows();
 		cache[HdTokens->params] = VtValue(shadowTaskParams);
 
 		GetRenderIndex().GetChangeTracker().MarkTaskDirty(
