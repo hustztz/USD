@@ -926,7 +926,7 @@ UsdMayaProxyShape::getShapeSelectionMask() const
         MSelectionMask::SelectionType selType = MSelectionMask::kSelectMeshes;
         return MSelectionMask(selType);
     }
-    return MPxSurfaceShape::getShapeSelectionMask();
+    return MSelectionMask(MSelectionMask::kSelectObjectsMask);
 }
 
 bool

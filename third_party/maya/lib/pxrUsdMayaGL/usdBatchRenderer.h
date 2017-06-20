@@ -31,6 +31,7 @@
 #include "pxrUsdMayaGL/usdTaskDelegate.h"
 #include "pxr/base/arch/hash.h"
 #include "pxr/base/tf/debug.h"
+#include "pxr/base/tf/iterator.h"
 #include "pxr/imaging/glf/simpleLightingContext.h"
 #include "pxr/imaging/hd/engine.h"
 #include "pxr/imaging/hd/renderIndex.h"
@@ -86,7 +87,7 @@ class UsdBatchRenderer : private boost::noncopyable
 		{
 			size_t hash = (refineLevel << 1);
 			boost::hash_combine(hash, overrideColor);
-			TF_FOR_ALL(rtIt, _renderTags) {
+			TF_FOR_ALL(rtIt, renderTags) {
 				boost::hash_combine(hash, rtIt->Hash());
 			}
 

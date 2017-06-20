@@ -41,7 +41,10 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-
+TF_DEFINE_PRIVATE_TOKENS(
+	_tokens,
+	(render)
+);
 
 MString UsdMayaProxyDrawOverride::sm_drawDbClassification("drawdb/geometry/usdMaya");
 MString UsdMayaProxyDrawOverride::sm_drawRegistrantId("pxrUsdPlugin");
@@ -111,7 +114,7 @@ UsdMayaProxyDrawOverride::isBounded(
     const MDagPath& objPath,
     const MDagPath& /* cameraPath */) const
 {
-    return UsdMayaIsBoundingBoxModeEnabled;
+    return UsdMayaIsBoundingBoxModeEnabled();
 }
 
 MBoundingBox
